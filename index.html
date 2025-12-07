@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Eletroposto - Modbus UFU</title>
+    <!-- Carrega Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configurações do Tailwind CSS para usar as cores UFU
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ufu-blue': '#1A237E', // Azul escuro UFU
+                        'ufu-gray': '#E0E7FF' // Cinza/Azul claro para fundo
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilo customizado para os cards de métricas */
+        .metric-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s ease-in-out;
+            border: 1px solid #C7D2FE; /* Cor de borda mais suave */
+        }
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        /* Estilo para centralizar os logos */
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-ufu-gray font-sans min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-10">
+
+        <!-- Bloco 1: Logos, Títulos Acadêmicos e Autores -->
+        <div class="flex flex-col sm:flex-row items-center justify-between space-y-6 sm:space-y-0 sm:space-x-4 mb-8 border-b pb-6">
+            
+            <!-- Esquerda: LADEE -->
+            <div class="logo-container sm:w-1/4">
+                <img src="LADEE.jpg" alt="Logo LADEE" class="h-16 w-16 md:h-24 md:w-24 object-contain rounded-full border-2 p-1 border-ufu-blue" title="Laboratório LADEE" onerror="this.onerror=null;this.src='https://placehold.co/96x96/1A237E/ffffff?text=LADEE'">
+                <p class="text-sm font-semibold text-ufu-blue mt-1 hidden sm:block">LADEE</p>
+            </div>
+
+            <!-- Centro: Informações Acadêmicas e Autores -->
+            <div class="text-center sm:w-2/4 order-first sm:order-none space-y-1">
+                <p class="text-lg font-bold text-ufu-blue uppercase">UNIVERSIDADE FEDERAL DE URBERLÂNDIA - UFU</p>
+                <p class="text-base font-semibold text-gray-700">FACULDADE DE ENGENHARIA ELÉTRICA - FEELT</p>
+                <h1 class="text-xl font-extrabold text-red-600 tracking-wider mt-2 uppercase">COMUNICAÇÃO DE VÉICULOS E ELECTROPOSTOS</h1>
+                
+                <div class="pt-4 text-sm font-medium text-gray-600 space-y-0.5">
+                    <p>Gabriel Machado</p>
+                    <p>Raiane Oliveira</p>
+                    <p>Milton Maleiane</p>
+                </div>
+            </div>
+
+            <!-- Direita: NUPEP -->
+            <div class="logo-container sm:w-1/4">
+                <img src="NUPEP.png" alt="Logo NUPEP" class="h-16 w-16 md:h-24 md:w-24 object-contain rounded-full border-2 p-1 border-ufu-blue" title="Núcleo de Pesquisa em Eletrônica de Potência" onerror="this.onerror=null;this.src='https://placehold.co/96x96/1A237E/ffffff?text=NUPEP'">
+                <p class="text-sm font-semibold text-ufu-blue mt-1 hidden sm:block">NUPEP</p>
+            </div>
+        </div>
+
+        <!-- Bloco 2: Status e Grade de Leituras -->
+        <div class="text-center mb-6">
+            <p id="status-message" class="text-base font-semibold text-gray-500 mb-4">Aguardando dados do ESP32...</p>
+        </div>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            
+            <!-- TENSÕES TRIFÁSICAS -->
+            <div class="col-span-2 sm:col-span-3 lg:col-span-5 mb-4">
+                <h4 class="text-xl font-bold text-ufu-blue border-b pb-1">TENSÕES DE ENTRADA (TRIFÁSICO)</h4>
+            </div>
+
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">TENSÃO A (VA)</p>
+                <p id="va-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">V</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">TENSÃO B (VB)</p>
+                <p id="vb-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">V</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">TENSÃO C (VC)</p>
+                <p id="vc-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">V</p>
+            </div>
+            
+            <!-- CORRENTES TRIFÁSICAS -->
+            <div class="col-span-2 sm:col-span-3 lg:col-span-5 mt-6 mb-4">
+                <h4 class="text-xl font-bold text-ufu-blue border-b pb-1">CORRENTES DE ENTRADA (TRIFÁSICO)</h4>
+            </div>
+
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">CORRENTE A (IA)</p>
+                <p id="ia-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">A</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">CORRENTE B (IB)</p>
+                <p id="ib-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">A</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center">
+                <p class="text-xs font-semibold uppercase opacity-80">CORRENTE C (IC)</p>
+                <p id="ic-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">A</p>
+            </div>
+            
+            <!-- SAÍDA E TEMPERATURA -->
+            <div class="col-span-2 sm:col-span-3 lg:col-span-5 mt-6 mb-4">
+                <h4 class="text-xl font-bold text-ufu-blue border-b pb-1">SAÍDA E AMBIENTE</h4>
+            </div>
+
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center col-span-1">
+                <p class="text-xs font-semibold uppercase opacity-80">TENSÃO SAÍDA (VOUT)</p>
+                <p id="vout-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">V</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center col-span-1">
+                <p class="text-xs font-semibold uppercase opacity-80">CORRENTE SAÍDA (IOUT)</p>
+                <p id="iout-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">A</p>
+            </div>
+            <div class="metric-card bg-white text-ufu-blue rounded-lg p-4 text-center col-span-1">
+                <p class="text-xs font-semibold uppercase opacity-80">TEMPERATURA</p>
+                <p id="temp-value" class="text-4xl font-extrabold mt-1">--</p>
+                <p class="text-sm">°C</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Configuração de Comunicação
+        const ESP32_IP = '192.168.4.1'; 
+        // O endpoint onde o ESP32 deve responder com o JSON dos dados.
+        const API_URL = `http://${ESP32_IP}/modbus_data`; 
+        const FETCH_INTERVAL_MS = 5000; // Intervalo de 5 segundos (Atualizado)
+
+        // FLAG DE MODO DE SIMULAÇÃO (MOCK)
+        // MANTENHA TRUE para testar o layout sem o ESP32.
+        // Mude para FALSE quando estiver ligado à rede do ESP32 (AP).
+        const MOCK_MODE = false; 
+
+        // Referências aos elementos DOM
+        const statusMessage = document.getElementById('status-message');
+        const iaElement = document.getElementById('ia-value');
+        const ibElement = document.getElementById('ib-value');
+        const icElement = document.getElementById('ic-value');
+        const vaElement = document.getElementById('va-value');
+        const vbElement = document.getElementById('vb-value');
+        const vcElement = document.getElementById('vc-value');
+        const ioutElement = document.getElementById('iout-value');
+        const voutElement = document.getElementById('vout-value');
+        const tempElement = document.getElementById('temp-value');
+
+
+        // Função para gerar dados simulados (Mock Data)
+        // Estrutura esperada do JSON que o ESP32 deve retornar.
+        function generateMockData() {
+            return {
+                // Tensões (em volts)
+                VA: 220.0 + (Math.random() * 3 - 1.5), 
+                VB: 220.0 + (Math.random() * 3 - 1.5),
+                VC: 220.0 + (Math.random() * 3 - 1.5),
+                
+                // Correntes (em amperes)
+                IA: 10.0 + (Math.random() * 1.0 - 0.5),  
+                IB: 10.0 + (Math.random() * 1.0 - 0.5),
+                IC: 10.0 + (Math.random() * 1.0 - 0.5),
+
+                // Saída e Temperatura
+                TEMP: 35.0 + (Math.random() * 2 - 1.0), // Temp (°C)
+                IOUT: 5.0 + (Math.random() * 1.0 - 0.5), // Corrente de Saída (A)
+                VOUT: 48.0 + (Math.random() * 0.5 - 0.25) // Tensão de Saída (V)
+            };
+        }
+
+        /**
+         * Função principal para buscar e atualizar os dados do ESP32.
+         */
+        async function fetchEsp32Data() {
+            let data;
+
+            if (MOCK_MODE) {
+                // MODO MOCK: Simula o atraso da rede e retorna dados gerados
+                statusMessage.textContent = "Modo de simulação (MOCK) ativo. Gerando dados...";
+                statusMessage.classList.remove('text-red-500', 'text-green-500');
+                statusMessage.classList.add('text-gray-500');
+
+                await new Promise(resolve => setTimeout(resolve, 500)); 
+                data = generateMockData();
+
+            } else {
+                // MODO REAL: Tenta conectar ao ESP32
+                try {
+                    statusMessage.textContent = "Solicitando dados ao ESP32...";
+                    statusMessage.classList.replace('text-red-500', 'text-gray-500');
+
+                    // Requisição com timeout para evitar travamentos
+                    const response = await fetch(API_URL, { signal: AbortSignal.timeout(1500) }); 
+
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+
+                    data = await response.json(); 
+                
+                } catch (error) {
+                    console.error("Erro ao comunicar com o ESP32:", error);
+                    
+                    // Atualiza o status de erro na interface
+                    [iaElement, ibElement, icElement, vaElement, vbElement, vcElement, tempElement, ioutElement, voutElement].forEach(el => el.textContent = '--');
+
+                    statusMessage.textContent = `ERRO: Não foi possível conectar ao ESP32 em ${API_URL}. Verifique a rede.`;
+                    statusMessage.classList.replace('text-gray-500', 'text-red-500');
+                    return; 
+                }
+            }
+
+            // Atualiza os valores na interface (com dados mockados ou reais)
+            iaElement.textContent = data.IA.toFixed(2);
+            ibElement.textContent = data.IB.toFixed(2);
+            icElement.textContent = data.IC.toFixed(2);
+            
+            vaElement.textContent = data.VA.toFixed(1);
+            vbElement.textContent = data.VB.toFixed(1);
+            vcElement.textContent = data.VC.toFixed(1);
+            
+            ioutElement.textContent = data.IOUT.toFixed(2);
+            voutElement.textContent = data.VOUT.toFixed(1);
+            tempElement.textContent = data.TEMP.toFixed(1);
+
+            // Atualiza o status de sucesso
+            if (MOCK_MODE) {
+                statusMessage.textContent = `Dados de simulação atualizados. (MOCK) - Próxima atualização em 5s.`;
+            } else {
+                statusMessage.textContent = "Dados atualizados com sucesso.";
+            }
+            statusMessage.classList.remove('text-red-500');
+            statusMessage.classList.add('text-green-500');
+        }
+
+        // Inicia a busca de dados no carregamento e a cada 5 segundos
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchEsp32Data();
+            setInterval(fetchEsp32Data, FETCH_INTERVAL_MS);
+        });
+    </script>
+</body>
+</html>
